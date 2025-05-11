@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { useMap } from "@/contexts/MapContext";
 import { toast } from "sonner";
-import { ArrowRight, BadgeIndianRupee } from "lucide-react";
+import { ArrowRight, BadgeIndianRupee, ListCheck, CalendarPlus, MapPin, Star } from "lucide-react";
 
 interface ServiceDetails {
   serviceName: string;
@@ -53,6 +53,50 @@ const Book = () => {
       }
     }
   }, []);
+  
+  // Available services
+  const availableServices = [
+    {
+      title: "Regular Parking",
+      description: "Standard parking spot",
+      price: 40,
+      basePrice: 40,
+      serviceType: "parking",
+      icon: <MapPin className="h-6 w-6 text-parking-blue" />
+    },
+    {
+      title: "Premium Parking",
+      description: "Exclusive spots with wider spaces",
+      price: 60,
+      basePrice: 60,
+      serviceType: "parking",
+      icon: <Star className="h-6 w-6 text-parking-blue" />
+    },
+    {
+      title: "Valet Parking",
+      description: "Let our drivers park for you",
+      price: 100,
+      basePrice: 100,
+      serviceType: "valet",
+      icon: <ListCheck className="h-6 w-6 text-parking-blue" />
+    },
+    {
+      title: "Car Wash",
+      description: "Get your car cleaned while parked",
+      price: 250,
+      basePrice: 250,
+      serviceType: "additional",
+      icon: <ListCheck className="h-6 w-6 text-parking-blue" />
+    },
+    {
+      title: "EV Charging",
+      description: "Electric vehicle charging",
+      price: 80,
+      basePrice: 80,
+      serviceType: "charging",
+      icon: <ListCheck className="h-6 w-6 text-parking-blue" />
+    }
+  ];
   
   // Booking state
   const [date, setDate] = useState<string>(
@@ -142,6 +186,18 @@ const Book = () => {
     return `${String(endHour).padStart(2, '0')}:${String(Math.floor(endMinute % 60)).padStart(2, '0')}`;
   };
   
+  const handleServiceSelect = (service: any) => {
+    const serviceDetails = {
+      serviceName: service.title,
+      price: service.price,
+      serviceType: service.serviceType
+    };
+    
+    setSelectedService(serviceDetails);
+    localStorage.setItem("selectedService", JSON.stringify(serviceDetails));
+    toast.success(`${service.title} added to your booking`);
+  };
+  
   if (!isAuthenticated) {
     return null; // Avoid rendering until redirected
   }
@@ -188,6 +244,37 @@ const Book = () => {
                           </Button>
                         </div>
                       )}
+                    </div>
+                    
+                    {/* Services Selection */}
+                    <div className="space-y-2">
+                      <Label>Available Services</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {availableServices.map((service, index) => (
+                          <div 
+                            key={index} 
+                            className={`p-4 border rounded-md cursor-pointer hover:border-blue-500 transition-colors ${
+                              selectedService && selectedService.serviceName === service.title
+                                ? 'border-parking-blue bg-blue-50'
+                                : 'border-gray-200'
+                            }`}
+                            onClick={() => handleServiceSelect(service)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="bg-blue-100 p-2 rounded-full">
+                                {service.icon}
+                              </div>
+                              <div>
+                                <p className="font-medium">{service.title}</p>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm text-gray-500">{service.description}</p>
+                                  <p className="text-parking-blue font-medium">₹{service.price}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                     
                     {/* Selected Service (if any) */}
