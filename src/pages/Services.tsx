@@ -1,44 +1,68 @@
-
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ServiceCard from "@/components/ServiceCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { ListCheck, Calendar, CreditCard, MapPin, Star, CalendarPlus } from "lucide-react";
 
 const Services = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  
+  const handleServiceBooking = (serviceName: string, price: number, serviceType: string) => {
+    if (!isAuthenticated) {
+      toast.error("Please log in to book services");
+      navigate("/login");
+      return;
+    }
+    
+    // Store selected service details in localStorage for the booking form
+    const serviceDetails = {
+      serviceName,
+      price,
+      serviceType
+    };
+    
+    localStorage.setItem("selectedService", JSON.stringify(serviceDetails));
+    navigate("/book");
+  };
   
   const parkingServices = [
     {
       title: "Regular Parking",
       description: "Find and book regular parking spots across Hyderabad with real-time availability updates.",
-      price: "₹40/hr onwards",
+      price: "₹40/hr",
+      basePrice: 40,
       icon: <MapPin className="h-6 w-6 text-parking-blue" />,
       buttonText: "Find Parking",
-      onButtonClick: () => navigate("/find-parking")
+      onButtonClick: () => handleServiceBooking("Regular Parking", 40, "parking")
     },
     {
       title: "Premium Parking",
       description: "Book exclusive premium parking spots with wider spaces and better security.",
-      price: "₹60/hr onwards",
+      price: "₹60/hr",
+      basePrice: 60,
       icon: <Star className="h-6 w-6 text-parking-blue" />,
       buttonText: "Book Premium",
-      onButtonClick: () => navigate("/find-parking")
+      onButtonClick: () => handleServiceBooking("Premium Parking", 60, "parking")
     },
     {
       title: "Advanced Booking",
       description: "Reserve parking spots up to 30 days in advance to ensure availability.",
-      price: "₹50/hr onwards",
+      price: "₹50/hr",
+      basePrice: 50,
       icon: <Calendar className="h-6 w-6 text-parking-blue" />,
       buttonText: "Book Now",
-      onButtonClick: () => navigate("/book")
+      onButtonClick: () => handleServiceBooking("Advanced Booking", 50, "parking")
     },
     {
       title: "Monthly Pass",
       description: "Get dedicated parking spots with monthly subscriptions for regular commuters.",
-      price: "₹3000/month onwards",
+      price: "₹3000/month",
+      basePrice: 3000,
       icon: <CalendarPlus className="h-6 w-6 text-parking-blue" />,
       buttonText: "Subscribe",
       onButtonClick: () => navigate("/subscriptions")
@@ -50,33 +74,37 @@ const Services = () => {
       title: "Valet Parking",
       description: "Our professional drivers park your vehicle for you. Available at selected locations.",
       price: "₹100/service",
+      basePrice: 100,
       icon: <ListCheck className="h-6 w-6 text-parking-blue" />,
       buttonText: "Book Valet",
-      onButtonClick: () => navigate("/book")
+      onButtonClick: () => handleServiceBooking("Valet Parking", 100, "valet")
     },
     {
       title: "Car Wash",
       description: "Get your car cleaned while it's parked. Available at premium parking locations.",
       price: "₹250/service",
+      basePrice: 250,
       icon: <ListCheck className="h-6 w-6 text-parking-blue" />,
       buttonText: "Add Service",
-      onButtonClick: () => navigate("/book")
+      onButtonClick: () => handleServiceBooking("Car Wash", 250, "additional")
     },
     {
       title: "EV Charging",
       description: "Electric vehicle charging stations available at select parking locations.",
       price: "₹80/hr",
+      basePrice: 80,
       icon: <ListCheck className="h-6 w-6 text-parking-blue" />,
       buttonText: "Find EV Spots",
-      onButtonClick: () => navigate("/find-parking")
+      onButtonClick: () => handleServiceBooking("EV Charging", 80, "charging")
     },
     {
       title: "Vehicle Insurance",
       description: "Optional insurance for your vehicle during parking duration.",
       price: "₹50/day",
+      basePrice: 50,
       icon: <ListCheck className="h-6 w-6 text-parking-blue" />,
       buttonText: "Learn More",
-      onButtonClick: () => navigate("/subscriptions")
+      onButtonClick: () => handleServiceBooking("Vehicle Insurance", 50, "insurance")
     },
   ];
   

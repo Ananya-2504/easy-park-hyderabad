@@ -36,10 +36,19 @@ const SubscriptionCard = ({
       return;
     }
     
-    const success = await subscribeToPlan(id);
-    if (success) {
-      navigate("/success");
-    }
+    // Store subscription details in localStorage for payment page
+    const subscriptionDetails = {
+      planId: id,
+      planName: name,
+      price: price,
+      currency: currency,
+      duration: duration
+    };
+    
+    localStorage.setItem("subscriptionDetails", JSON.stringify(subscriptionDetails));
+    
+    // Navigate to payment page
+    navigate("/payment");
   };
 
   return (

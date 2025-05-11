@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import { toast } from "sonner";
 import { BadgeIndianRupee, CreditCard, Smartphone } from "lucide-react";
 
@@ -22,13 +23,25 @@ interface BookingDetails {
   vehicleType: string;
   vehicleNumber: string;
   price: number;
+  services?: string[];
+}
+
+interface SubscriptionDetails {
+  planId: string;
+  planName: string;
+  price: number;
+  currency: string;
+  duration: string;
 }
 
 const Payment = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { subscribeToPlan } = useSubscription();
   
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<SubscriptionDetails | null>(null);
+  const [paymentType, setPaymentType] = useState<"booking" | "subscription">("booking");
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -48,13 +61,31 @@ const Payment = () => {
       return;
     }
     
-    // Get booking details from localStorage
-    const storedDetails = localStorage.getItem("bookingDetails");
-    if (storedDetails) {
-      setBookingDetails(JSON.parse(storedDetails));
-    } else {
-      // If no booking details, redirect to find parking
-      toast.error("No booking details found");
+    // Check if we have booking details
+    const storedBookingDetails = localStorage.getItem("bookingDetails");
+    if (storedBookingDetails) {
+      try {
+        setBookingDetails(JSON.parse(storedBookingDetails));
+        setPaymentType("booking");
+      } catch (error) {
+        console.error("Error parsing booking details:", error);
+      }
+    }
+    
+    // Check if we have subscription details
+    const storedSubscriptionDetails = localStorage.getItem("subscriptionDetails");
+    if (storedSubscriptionDetails) {
+      try {
+        setSubscriptionDetails(JSON.parse(storedSubscriptionDetails));
+        setPaymentType("subscription");
+      } catch (error) {
+        console.error("Error parsing subscription details:", error);
+      }
+    }
+    
+    // If neither, redirect to find-parking
+    if (!storedBookingDetails && !storedSubscriptionDetails) {
+      toast.error("No payment details found");
       navigate("/find-parking");
     }
   }, [isAuthenticated, navigate]);
@@ -62,8 +93,8 @@ const Payment = () => {
   const handlePayment = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!bookingDetails) {
-      toast.error("No booking details found");
+    if (!bookingDetails && !subscriptionDetails) {
+      toast.error("No payment details found");
       return;
     }
     
@@ -100,20 +131,49 @@ const Payment = () => {
     // Process payment (mock)
     setIsProcessing(true);
     
-    setTimeout(() => {
-      // Clear the booking details from localStorage
-      localStorage.removeItem("bookingDetails");
-      
-      // Navigate to success page
-      navigate("/success");
+    setTimeout(async () => {
+      // If it's a subscription payment, trigger the subscription function
+      if (paymentType === "subscription" && subscriptionDetails) {
+        // Call the subscribeToPlan function
+        const success = await subscribeToPlan(subscriptionDetails.planId);
+        if (success) {
+          // Clear the subscription details from localStorage
+          localStorage.removeItem("subscriptionDetails");
+          navigate("/success");
+        } else {
+          toast.error("Subscription failed. Please try again.");
+        }
+      } else {
+        // Clear the booking details from localStorage
+        localStorage.removeItem("bookingDetails");
+        
+        // Navigate to success page
+        navigate("/success");
+      }
       
       setIsProcessing(false);
     }, 1500);
   };
   
-  if (!isAuthenticated || !bookingDetails) {
-    return null; // Avoid rendering until redirected or booking details loaded
+  if (!isAuthenticated || (!bookingDetails && !subscriptionDetails)) {
+    return null; // Avoid rendering until redirected or details loaded
   }
+  
+  const getPrice = () => {
+    if (paymentType === "booking" && bookingDetails) {
+      return bookingDetails.price;
+    } else if (paymentType === "subscription" && subscriptionDetails) {
+      return subscriptionDetails.price;
+    }
+    return 0;
+  };
+  
+  const getCurrency = () => {
+    if (paymentType === "subscription" && subscriptionDetails) {
+      return subscriptionDetails.currency;
+    }
+    return "₹"; // Default currency
+  };
   
   return (
     <div className="flex flex-col min-h-screen">
@@ -130,7 +190,7 @@ const Payment = () => {
                 <CardHeader>
                   <CardTitle>Choose Payment Method</CardTitle>
                   <CardDescription>
-                    Select a payment method to complete your booking
+                    Select a payment method to complete your {paymentType === "booking" ? "booking" : "subscription"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -229,54 +289,85 @@ const Payment = () => {
                       className="w-full mt-8 bg-parking-blue hover:bg-blue-500"
                       disabled={isProcessing}
                     >
-                      {isProcessing ? "Processing..." : `Pay ₹${bookingDetails.price}`}
+                      {isProcessing ? "Processing..." : `Pay ${getCurrency()}${getPrice()}`}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
             </div>
             
-            {/* Booking Summary */}
+            {/* Payment Summary */}
             <div>
               <Card>
                 <CardHeader>
-                  <CardTitle>Booking Summary</CardTitle>
+                  <CardTitle>{paymentType === "booking" ? "Booking" : "Subscription"} Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <h3 className="font-medium">{bookingDetails.parkingName}</h3>
-                    <p className="text-sm text-gray-500">Parking ID: {bookingDetails.parkingId}</p>
-                  </div>
+                  {paymentType === "booking" && bookingDetails && (
+                    <>
+                      <div>
+                        <h3 className="font-medium">{bookingDetails.parkingName}</h3>
+                        <p className="text-sm text-gray-500">Parking ID: {bookingDetails.parkingId}</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Date</span>
+                          <span>{new Date(bookingDetails.date).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Time</span>
+                          <span>{bookingDetails.startTime} - {bookingDetails.endTime}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Duration</span>
+                          <span>{bookingDetails.duration} hours</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Vehicle</span>
+                          <span className="capitalize">{bookingDetails.vehicleType}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Vehicle Number</span>
+                          <span>{bookingDetails.vehicleNumber}</span>
+                        </div>
+                        
+                        {bookingDetails.services && bookingDetails.services.length > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Additional Services</span>
+                            <span>{bookingDetails.services.join(', ')}</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                   
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Date</span>
-                      <span>{new Date(bookingDetails.date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Time</span>
-                      <span>{bookingDetails.startTime} - {bookingDetails.endTime}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Duration</span>
-                      <span>{bookingDetails.duration} hours</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Vehicle</span>
-                      <span className="capitalize">{bookingDetails.vehicleType}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Vehicle Number</span>
-                      <span>{bookingDetails.vehicleNumber}</span>
-                    </div>
-                  </div>
+                  {paymentType === "subscription" && subscriptionDetails && (
+                    <>
+                      <div>
+                        <h3 className="font-medium">{subscriptionDetails.planName} Plan</h3>
+                        <p className="text-sm text-gray-500">{subscriptionDetails.duration} subscription</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Plan Duration</span>
+                          <span>1 {subscriptionDetails.duration}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Auto-Renewal</span>
+                          <span>Yes</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                   
                   <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total</span>
                       <span className="flex items-center">
                         <BadgeIndianRupee className="h-4 w-4 mr-1" />
-                        {bookingDetails.price}
+                        {getPrice()}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">

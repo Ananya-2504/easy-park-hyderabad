@@ -13,6 +13,12 @@ import { useMap } from "@/contexts/MapContext";
 import { toast } from "sonner";
 import { ArrowRight, BadgeIndianRupee } from "lucide-react";
 
+interface ServiceDetails {
+  serviceName: string;
+  price: number;
+  serviceType: string;
+}
+
 const Book = () => {
   const navigate = useNavigate();
   const params = useParams();
@@ -33,6 +39,21 @@ const Book = () => {
     (parkingId ? parkingSpots.find(spot => spot.id === parkingId) : null)
   );
   
+  // Get any selected service from localStorage
+  const [selectedService, setSelectedService] = useState<ServiceDetails | null>(null);
+  
+  useEffect(() => {
+    const serviceData = localStorage.getItem("selectedService");
+    if (serviceData) {
+      try {
+        const parsedService = JSON.parse(serviceData);
+        setSelectedService(parsedService);
+      } catch (error) {
+        console.error("Error parsing service data:", error);
+      }
+    }
+  }, []);
+  
   // Booking state
   const [date, setDate] = useState<string>(
     new Date().toISOString().split('T')[0]
@@ -52,11 +73,25 @@ const Book = () => {
       
       // Add vehicle type multiplier
       const vehicleMultiplier = vehicleType === "car" ? 1 : vehicleType === "bike" ? 0.7 : 1.5;
-      const finalPrice = basePrice * vehicleMultiplier;
+      let calculatedPrice = basePrice * vehicleMultiplier;
       
-      setTotalPrice(Math.round(finalPrice));
+      // Add any additional service costs
+      if (selectedService) {
+        if (selectedService.serviceType === "parking") {
+          // For parking-type services, replace the base rate with the service rate
+          calculatedPrice = selectedService.price * duration * vehicleMultiplier;
+        } else if (selectedService.serviceType === "charging") {
+          // For EV charging, apply the rate to the duration
+          calculatedPrice += selectedService.price * duration;
+        } else {
+          // For flat-fee services, just add the service price
+          calculatedPrice += selectedService.price;
+        }
+      }
+      
+      setTotalPrice(Math.round(calculatedPrice));
     }
-  }, [parking, duration, vehicleType]);
+  }, [parking, duration, vehicleType, selectedService]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +117,8 @@ const Book = () => {
       endTime: calculateEndTime(startTime, duration),
       vehicleType,
       vehicleNumber,
-      price: totalPrice
+      price: totalPrice,
+      services: selectedService ? [selectedService.serviceName] : []
     };
     
     // Store booking details in localStorage for payment page
@@ -153,6 +189,36 @@ const Book = () => {
                         </div>
                       )}
                     </div>
+                    
+                    {/* Selected Service (if any) */}
+                    {selectedService && (
+                      <div className="space-y-2">
+                        <Label>Selected Service</Label>
+                        <div className="p-4 bg-blue-50 rounded-md">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{selectedService.serviceName}</p>
+                              <p className="text-sm text-gray-500">
+                                {selectedService.serviceType === "parking" || selectedService.serviceType === "charging" 
+                                  ? `₹${selectedService.price}/hr` 
+                                  : `₹${selectedService.price} (flat fee)`}
+                              </p>
+                            </div>
+                            <Button 
+                              type="button" 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedService(null);
+                                localStorage.removeItem("selectedService");
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Date and Time */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -256,7 +322,9 @@ const Book = () => {
                 <CardContent className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Base Rate</span>
-                    <span>₹{parking?.price || 0}/hr</span>
+                    <span>₹{selectedService && selectedService.serviceType === "parking" 
+                      ? selectedService.price 
+                      : parking?.price || 0}/hr</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Duration</span>
@@ -266,6 +334,14 @@ const Book = () => {
                     <span className="text-gray-500">Vehicle Type</span>
                     <span className="capitalize">{vehicleType}</span>
                   </div>
+                  
+                  {/* Display additional services */}
+                  {selectedService && selectedService.serviceType !== "parking" && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">{selectedService.serviceName}</span>
+                      <span>₹{selectedService.price}</span>
+                    </div>
+                  )}
                   
                   <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between font-bold text-lg">

@@ -21,6 +21,7 @@ interface Booking {
   vehicle: string;
   status: "upcoming" | "completed" | "cancelled";
   price: number;
+  parkingId?: string; // Added for Book Again feature
 }
 
 const mockBookings: Booking[] = [
@@ -28,6 +29,7 @@ const mockBookings: Booking[] = [
     id: "b001",
     parkingName: "Jubilee Hills Parking",
     location: "Road No. 10, Jubilee Hills",
+    parkingId: "p001",
     date: "2025-05-12",
     timeSlot: "10:00 AM - 12:00 PM",
     vehicle: "AP 12 AB 1234",
@@ -38,6 +40,7 @@ const mockBookings: Booking[] = [
     id: "b002",
     parkingName: "Banjara Hills Parking",
     location: "Road No. 3, Banjara Hills",
+    parkingId: "p002",
     date: "2025-05-14",
     timeSlot: "02:00 PM - 04:00 PM",
     vehicle: "AP 12 AB 1234",
@@ -48,6 +51,7 @@ const mockBookings: Booking[] = [
     id: "b003",
     parkingName: "HITEC City Parking",
     location: "HITEC City",
+    parkingId: "p003",
     date: "2025-05-05",
     timeSlot: "09:00 AM - 11:00 AM",
     vehicle: "AP 12 AB 1234",
@@ -58,6 +62,7 @@ const mockBookings: Booking[] = [
     id: "b004",
     parkingName: "Gachibowli Parking",
     location: "Financial District, Gachibowli",
+    parkingId: "p004",
     date: "2025-05-01",
     timeSlot: "03:00 PM - 05:00 PM",
     vehicle: "AP 12 AB 1234",
@@ -68,6 +73,7 @@ const mockBookings: Booking[] = [
     id: "b005",
     parkingName: "Begumpet Parking",
     location: "Begumpet",
+    parkingId: "p005",
     date: "2025-04-28",
     timeSlot: "11:00 AM - 01:00 PM",
     vehicle: "AP 12 AB 1234",
@@ -118,6 +124,17 @@ const Dashboard = () => {
   const handleReschedule = (bookingId: string) => {
     // In a real app, this would navigate to a reschedule form
     toast.info("Reschedule functionality will be implemented soon");
+  };
+  
+  const handleBookAgain = (booking: Booking) => {
+    // Check if parking ID exists
+    if (!booking.parkingId) {
+      toast.error("Parking information is missing");
+      return;
+    }
+    
+    // Use the parkingId to navigate to booking page
+    navigate(`/book/${booking.parkingId}`);
   };
   
   if (!isAuthenticated || !user) {
@@ -347,7 +364,7 @@ const Dashboard = () => {
                           {booking.status === "completed" && (
                             <Button 
                               className="w-full bg-parking-blue hover:bg-blue-500"
-                              variant="outline"
+                              onClick={() => handleBookAgain(booking)}
                             >
                               Book Again
                             </Button>
