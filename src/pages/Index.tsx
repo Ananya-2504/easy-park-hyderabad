@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, CreditCard, Star, ListCheck } from "lucide-react";
+import { MapPin, Calendar, CreditCard, Star, Check as CheckIcon } from "lucide-react";
 import ServiceCard from "@/components/ServiceCard";
 
 const Index = () => {
